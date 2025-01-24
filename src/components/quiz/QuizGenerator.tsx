@@ -50,7 +50,7 @@ export const QuizGenerator: React.FC = () => {
   const handleQuestionTypeChange = (questionId: number, newType: Question['type']) => {
     setQuestions(questions.map(question => {
       if (question.id === questionId) {
-        let options: Option[] = [];  // Now Option type should be recognized
+        let options: Option[] = []; 
         
         switch (newType) {
           case 'multiple-choice':
@@ -144,7 +144,7 @@ export const QuizGenerator: React.FC = () => {
     const existingQuizzes = JSON.parse(sessionStorage.getItem('quizzes') || '[]');
     sessionStorage.setItem('quizzes', JSON.stringify([...existingQuizzes, newQuiz]));
 
-    // Navigate to dashboard
+    
     navigate('/dashboard');
   };
 

@@ -1,4 +1,3 @@
-// src/components/quiz/QuizResults.tsx
 import React from 'react';
 
 export const QuizResults: React.FC = () => {

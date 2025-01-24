@@ -25,7 +25,6 @@ export const DashboardHome: React.FC = () => {
   const handleShareQuiz = (quizId: string) => {
     const shareableLink = `${window.location.origin}/take-quiz/${quizId}`;
     
-    // Fallback copy method
     const fallbackCopyTextToClipboard = (text: string) => {
       const textArea = document.createElement("textarea");
       textArea.value = text;
@@ -44,8 +43,6 @@ export const DashboardHome: React.FC = () => {
       
       document.body.removeChild(textArea);
     };
-
-    // Try modern clipboard API first
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareableLink)
         .then(() => {
@@ -55,7 +52,6 @@ export const DashboardHome: React.FC = () => {
           fallbackCopyTextToClipboard(shareableLink);
         });
     } else {
-      // Fallback for older browsers
       fallbackCopyTextToClipboard(shareableLink);
     }
   };
