@@ -8,13 +8,13 @@ export const DashboardHome: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedQuizzes = JSON.parse(sessionStorage.getItem('quizzes') || '[]');
+    const savedQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
     setQuizzes(savedQuizzes);
   }, []);
 
   const deleteQuiz = (quizId: string) => {
     const updatedQuizzes = quizzes.filter(quiz => quiz.id !== quizId);
-    sessionStorage.setItem('quizzes', JSON.stringify(updatedQuizzes));
+    localStorage.setItem('quizzes', JSON.stringify(updatedQuizzes));
     setQuizzes(updatedQuizzes);
   };
 

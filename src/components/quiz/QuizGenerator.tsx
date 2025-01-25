@@ -21,7 +21,7 @@ export const QuizGenerator: React.FC = () => {
   }]);
   useEffect(() => {
     if (quizId) {
-      const existingQuizzes = JSON.parse(sessionStorage.getItem('quizzes') || '[]');
+      const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
       const quizToEdit = existingQuizzes.find((q: Quiz) => q.id === quizId);
       
       if (quizToEdit) {
@@ -140,9 +140,9 @@ export const QuizGenerator: React.FC = () => {
       averageScore: 0
     };
 
-    // Save quiz to sessionStorage
-    const existingQuizzes = JSON.parse(sessionStorage.getItem('quizzes') || '[]');
-    sessionStorage.setItem('quizzes', JSON.stringify([...existingQuizzes, newQuiz]));
+    // Save quiz to localStorage
+    const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
+    localStorage.setItem('quizzes', JSON.stringify([...existingQuizzes, newQuiz]));
 
     
     navigate('/dashboard');

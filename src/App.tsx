@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { QuizGenerator } from './components/quiz/QuizGenerator';
 import { QuizResults } from './components/quiz/QuizResults';
 import { DashboardHome } from './components/DashboardHome';
 import { QuizPreview } from './components/quiz/QuizPreview';
+import { TakeQuiz } from './components/quiz/TakeQuiz';
 
 const AppContent: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activePage, setActivePage] = useState('home');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handlePageChange = (pageId: string) => {
     setActivePage(pageId);
@@ -26,22 +28,28 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const isQuizTakingRoute = location.pathname.startsWith('/take-quiz/');
+
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-        activePage={activePage}
-        setActivePage={handlePageChange}
-      />
+      {!isQuizTakingRoute && (
+        <Sidebar
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+          activePage={activePage}
+          setActivePage={handlePageChange}
+        />
+      )}
 
-      <div className="flex-1 overflow-auto">
-        <header className="bg-white h-16 shadow-sm flex items-center px-6">
-          <h2 className="text-2xl font-semibold">
-            {activePage === 'home' ? 'Dashboard' :
-              activePage === 'generate' ? 'Generate Quiz' : 'View Results'}
-          </h2>
-        </header>
+      <div className={`${isQuizTakingRoute ? 'w-full' : 'flex-1'} overflow-auto`}>
+        {!isQuizTakingRoute && (
+          <header className="bg-white h-16 shadow-sm flex items-center px-6">
+            <h2 className="text-2xl font-semibold">
+              {activePage === 'home' ? 'Dashboard' :
+                activePage === 'generate' ? 'Generate Quiz' : 'View Results'}
+            </h2>
+          </header>
+        )}
 
         <main className="p-6">
           <Routes>
@@ -51,6 +59,7 @@ const AppContent: React.FC = () => {
             <Route path="/results" element={<QuizResults />} />
             <Route path="*" element={<DashboardHome />} />
             <Route path="/quiz/:quizId" element={<QuizPreview />} />
+            <Route path="/take-quiz/:quizId" element={<TakeQuiz />} />
           </Routes>
         </main>
       </div>

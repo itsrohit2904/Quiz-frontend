@@ -10,7 +10,7 @@ export const QuizPreview: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   useEffect(() => {
-    const savedQuizzes = JSON.parse(sessionStorage.getItem('quizzes') || '[]');
+    const savedQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
     const currentQuiz = savedQuizzes.find((q: Quiz) => q.id === quizId);
     if (currentQuiz) {
       setQuiz(currentQuiz);
