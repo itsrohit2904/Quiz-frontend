@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { Option, Question, Quiz } from '../../types/quiz'; 
+
 export const QuizGenerator: React.FC = () => {
   const navigate = useNavigate();
   const {quizId} = useParams();
@@ -19,6 +20,7 @@ export const QuizGenerator: React.FC = () => {
     ],
     correctAnswer: ''
   }]);
+
   useEffect(() => {
     if (quizId) {
       const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
@@ -130,20 +132,38 @@ export const QuizGenerator: React.FC = () => {
       return;
     }
 
-    const newQuiz: Quiz = {
-      id: Math.random().toString(36).substr(2, 9),
-      title,
-      description,
-      questions,
-      createdAt: new Date(),
-      participants: 0,
-      averageScore: 0
-    };
-
-    // Save quiz to localStorage
+    // Get existing quizzes
     const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
-    localStorage.setItem('quizzes', JSON.stringify([...existingQuizzes, newQuiz]));
 
+    if (quizId) {
+      // Update existing quiz
+      const updatedQuizzes = existingQuizzes.map((quiz: Quiz) => 
+        quiz.id === quizId 
+          ? { 
+              ...quiz, 
+              title, 
+              description, 
+              questions 
+            } 
+          : quiz
+      );
+      
+      localStorage.setItem('quizzes', JSON.stringify(updatedQuizzes));
+    } else {
+      // Create new quiz
+      const newQuiz: Quiz = {
+        id: Math.random().toString(36).substr(2, 9),
+        title,
+        description,
+        questions,
+        createdAt: new Date(),
+        participants: 0,
+        averageScore: 0
+      };
+
+      // Save new quiz to localStorage
+      localStorage.setItem('quizzes', JSON.stringify([...existingQuizzes, newQuiz]));
+    }
     
     navigate('/dashboard');
   };
