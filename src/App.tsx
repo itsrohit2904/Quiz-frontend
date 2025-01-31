@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState} from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Login } from './components/auth/Login';
+import { Register } from './components/auth/Register';
 import { Sidebar } from './components/layout/Sidebar';
 import { QuizGenerator } from './components/quiz/QuizGenerator';
 import { QuizResults } from './components/quiz/QuizResults';
@@ -7,32 +9,41 @@ import { DashboardHome } from './components/DashboardHome';
 import { QuizPreview } from './components/quiz/QuizPreview';
 import { TakeQuiz } from './components/quiz/TakeQuiz';
 
+// Protected Route wrapper component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const currentUser = localStorage.getItem('token'); // Check for token
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 const AppContent: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activePage, setActivePage] = useState('home');
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const handlePageChange = (pageId: string) => {
     setActivePage(pageId);
-    switch (pageId) {
-      case 'home':
-        navigate('/dashboard');
-        break;
-      case 'generate':
-        navigate('/create-quiz');
-        break;
-      case 'results':
-        navigate('/results');
-        break;
+    if (pageId === 'home') {
+      navigate('/dashboard');
+    } else if (pageId === 'generate') {
+      navigate('/create-quiz');
+    } else if (pageId === 'results') {
+      navigate('/results');
     }
   };
 
   const isQuizTakingRoute = location.pathname.startsWith('/take-quiz/');
+  const isAuthRoute = location.pathname === '/login' || location.pathname === '/register';
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {!isQuizTakingRoute && (
+      {/* Only render Sidebar for non-auth and non-quiz-taking routes */}
+      {!isQuizTakingRoute && !isAuthRoute && (
         <Sidebar
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
@@ -41,8 +52,8 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      <div className={`${isQuizTakingRoute ? 'w-full' : 'flex-1'} overflow-auto`}>
-        {!isQuizTakingRoute && (
+      <div className={`${isQuizTakingRoute || isAuthRoute ? 'w-full' : 'flex-1'} overflow-auto`}>
+        {!isQuizTakingRoute && !isAuthRoute && (
           <header className="bg-white h-16 shadow-sm flex items-center px-6">
             <h2 className="text-2xl font-semibold">
               {activePage === 'home' ? 'Dashboard' :
@@ -51,15 +62,41 @@ const AppContent: React.FC = () => {
           </header>
         )}
 
-        <main className="p-6">
+        <main className={isAuthRoute ? '' : 'p-6'}>
           <Routes>
-            <Route path="/dashboard" element={<DashboardHome />} />
-            <Route path="/create-quiz" element={<QuizGenerator />} />
-            <Route path="/edit-quiz/:quizId" element={<QuizGenerator />} />
-            <Route path="/results" element={<QuizResults />} />
-            <Route path="*" element={<DashboardHome />} />
-            <Route path="/quiz/:quizId" element={<QuizPreview />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             <Route path="/take-quiz/:quizId" element={<TakeQuiz />} />
+
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <DashboardHome />
+              </ProtectedRoute>
+            } />
+            <Route path="/create-quiz" element={
+              <ProtectedRoute>
+                <QuizGenerator />
+              </ProtectedRoute>
+            } />
+            <Route path="/edit-quiz/:quizId" element={
+              <ProtectedRoute>
+                <QuizGenerator />
+              </ProtectedRoute>
+            } />
+            <Route path="/results" element={
+              <ProtectedRoute>
+                <QuizResults />
+              </ProtectedRoute>
+            } />
+            <Route path="/quiz/:quizId" element={
+              <ProtectedRoute>
+                <QuizPreview />
+              </ProtectedRoute>
+            } />
+
+            {/* Root route redirects to login */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
           </Routes>
         </main>
       </div>

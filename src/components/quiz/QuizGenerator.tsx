@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { Option, Question, Quiz } from '../../types/quiz'; 
+import type { Option, Question, Quiz, ParticipantField } from '../../types/quiz'; 
 
 export const QuizGenerator: React.FC = () => {
   const navigate = useNavigate();
@@ -20,6 +20,10 @@ export const QuizGenerator: React.FC = () => {
     ],
     correctAnswer: ''
   }]);
+  const [participantFields, setParticipantFields] = useState<ParticipantField[]>([
+    { id: 1, label: 'Name', type: 'text', required: true },
+    { id: 2, label: 'Email', type: 'email', required: true }
+  ]);
 
   useEffect(() => {
     if (quizId) {
@@ -30,9 +34,32 @@ export const QuizGenerator: React.FC = () => {
         setTitle(quizToEdit.title);
         setDescription(quizToEdit.description);
         setQuestions(quizToEdit.questions);
+        setParticipantFields(quizToEdit.participantFields || [
+          { id: 1, label: 'Name', type: 'text', required: true },
+          { id: 2, label: 'Email', type: 'email', required: true }
+        ]);
       }
     }
   }, [quizId]);
+  const addParticipantField = () => {
+    setParticipantFields([...participantFields, {
+      id: participantFields.length + 1,
+      label: '',
+      type: 'text',
+      required: false
+    }]);
+  };
+
+  const updateParticipantField = (id: number, field: Partial<ParticipantField>) => {
+    setParticipantFields(participantFields.map(f => 
+      f.id === id ? { ...f, ...field } : f
+    ));
+  };
+
+  const deleteParticipantField = (id: number) => {
+    setParticipantFields(participantFields.filter(f => f.id !== id));
+  };
+
 
   const addQuestion = () => {
     setQuestions([...questions, {
@@ -131,6 +158,10 @@ export const QuizGenerator: React.FC = () => {
       alert('Please select correct answers for all questions');
       return;
     }
+    if (participantFields.some(f => !f.label.trim())) {
+      alert('Please fill in all participant field labels');
+      return;
+    }
 
     // Get existing quizzes
     const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
@@ -188,6 +219,60 @@ export const QuizGenerator: React.FC = () => {
             rows={3}
           />
         </div>
+      </div>
+      <div className="mt-6 border-t pt-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Participant Information</h3>
+          <button
+            onClick={addParticipantField}
+            className="flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+          >
+            <PlusCircle size={20} className="mr-2" />
+            Add Field
+          </button>
+        </div>
+        
+        {participantFields.map((field) => (
+          <div key={field.id} className="border rounded-lg p-4 mb-4">
+            <div className="flex justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => deleteParticipantField(field.id)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 size={20} />
+                </button>
+              </div>
+              <select
+                className="border rounded p-1"
+                value={field.type}
+                onChange={(e) => updateParticipantField(field.id, { type: e.target.value as 'text' | 'email' })}
+              >
+                <option value="text">Text</option>
+                <option value="email">Email</option>
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Field Label"
+                value={field.label}
+                onChange={(e) => updateParticipantField(field.id, { label: e.target.value })}
+                className="w-full p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={field.required}
+                  onChange={(e) => updateParticipantField(field.id, { required: e.target.checked })}
+                  className="mr-2"
+                />
+                Required Field
+              </label>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="space-y-6">

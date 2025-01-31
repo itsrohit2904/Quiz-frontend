@@ -1,23 +1,81 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Quiz, Question } from '../../types/quiz';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Quiz, QuizResult } from '../../types/quiz';
+
+interface ParticipantInfo {
+  participantName: string;
+  participantEmail: string;
+}
 
 export const TakeQuiz: React.FC = () => {
   const { quizId } = useParams();
+  const navigate = useNavigate();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [userAnswers, setUserAnswers] = useState<{[key: number]: string}>({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [participantInfo, setParticipantInfo] = useState<ParticipantInfo>({
+    participantName: '',
+    participantEmail: ''
+  });
 
   useEffect(() => {
     const savedQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
     const foundQuiz = savedQuizzes.find((q: Quiz) => q.id === quizId);
     
     if (foundQuiz) {
+      // Check if retakes are allowed
+      const quizResults = JSON.parse(localStorage.getItem('quizResults') || '[]');
+      const hasAttempted = quizResults.some((result: QuizResult) => 
+        result.quizId === quizId && 
+        result.participantEmail === participantInfo.participantEmail
+      );
+
+      if (hasAttempted && !foundQuiz.settings?.allowRetake) {
+        alert("You have already taken this quiz and retakes are not allowed.");
+        navigate('/');
+        return;
+      }
+
       setQuiz(foundQuiz);
+      
+      // Set timer if there's a time limit
+      if (foundQuiz.settings?.timeLimit) {
+        setTimeRemaining(foundQuiz.settings.timeLimit * 60); // Convert minutes to seconds
+      }
     }
-  }, [quizId]);
+  }, [quizId, navigate, participantInfo.participantEmail]);
+
+  // Timer effect
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval>;
+    
+    if (timeRemaining !== null && timeRemaining > 0 && !submitted) {
+      timer = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev === null || prev <= 1) {
+            clearInterval(timer);
+            handleSubmit();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [timeRemaining, submitted]);
+
+  const handleParticipantInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setParticipantInfo(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
 
   const handleAnswerChange = (questionId: number, answer: string) => {
     setUserAnswers(prev => ({
@@ -33,17 +91,9 @@ export const TakeQuiz: React.FC = () => {
     let correctCount = 0;
     quiz.questions.forEach(question => {
       const userAnswer = userAnswers[question.id];
-      
-      if (question.type === 'multiple-choice' || question.type === 'true-false') {
-        if (userAnswer === question.correctAnswer) {
-          calculatedScore++;
-          correctCount++;
-        }
-      } else if (question.type === 'short-answer') {
-        if (userAnswer && userAnswer.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase()) {
-          calculatedScore++;
-          correctCount++;
-        }
+      if (userAnswer === question.correctAnswer) {
+        calculatedScore++;
+        correctCount++;
       }
     });
 
@@ -52,60 +102,66 @@ export const TakeQuiz: React.FC = () => {
     setCorrectAnswers(correctCount);
     setSubmitted(true);
 
-    // Update quiz statistics
-    const savedQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
-    const updatedQuizzes = savedQuizzes.map((q: Quiz) => {
-      if (q.id === quizId) {
-        return {
-          ...q,
-          participants: (q.participants || 0) + 1,
-          averageScore: Math.round(((q.averageScore || 0) + finalScore) / ((q.participants || 0) + 1))
-        };
-      }
-      return q;
-    });
-
-    // Save updated quizzes and result
-    localStorage.setItem('quizzes', JSON.stringify(updatedQuizzes));
-
-    // Save result
     const results = JSON.parse(localStorage.getItem('quizResults') || '[]');
-    const newResult = {
+    const newResult: QuizResult = {
       quizId: quiz.id,
       quizTitle: quiz.title,
+      participantName: participantInfo.participantName,
+      participantEmail: participantInfo.participantEmail,
       score: finalScore,
       date: new Date().toISOString()
     };
     localStorage.setItem('quizResults', JSON.stringify([...results, newResult]));
+
+    const savedQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
+    const updatedQuizzes = savedQuizzes.map((q: Quiz) => {
+      if (q.id === quizId) {
+        const currentParticipants = q.participants || 0;
+        const currentAverage = q.averageScore || 0;
+        return {
+          ...q,
+          participants: currentParticipants + 1,
+          averageScore: Math.round(
+            ((currentAverage * currentParticipants) + finalScore) / (currentParticipants + 1)
+          )
+        };
+      }
+      return q;
+    });
+    localStorage.setItem('quizzes', JSON.stringify(updatedQuizzes));
+  };
+
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   if (!quiz) return <div>Loading...</div>;
 
   if (submitted) {
-    const getResultMessage = () => {
-      return "Your Quiz has been Submitted"
-    };
-
     return (
       <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-8 text-center">
         <h2 className="text-3xl font-bold mb-6 text-green-600">Quiz Completed!</h2>
         <div className="bg-blue-50 p-6 rounded-lg mb-6">
+          <div className="mb-4 text-left">
+            <h3 className="font-semibold mb-2">Participant Information</h3>
+            <p>Name: {participantInfo.participantName}</p>
+            <p>Email: {participantInfo.participantEmail}</p>
+          </div>
           <p className="text-2xl mb-4">Your Score: <span className="font-bold">{score}%</span></p>
           <p className="text-xl text-gray-700 mb-4">
             {correctAnswers} out of {quiz.questions.length} questions correct
           </p>
-          <p className="text-lg font-semibold text-blue-800">
-            {getResultMessage()}
-          </p>
         </div>
-        <div className="flex justify-center gap-4">
+        {quiz.settings?.allowRetake && (
           <button 
             onClick={() => window.location.reload()}
             className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
           >
             Retake Quiz
           </button>
-        </div>
+        )}
       </div>
     );
   }
@@ -114,6 +170,42 @@ export const TakeQuiz: React.FC = () => {
     <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-6">
       <h2 className="text-2xl font-semibold mb-6">{quiz.title}</h2>
       <p className="mb-6 text-gray-600">{quiz.description}</p>
+
+      {timeRemaining !== null && (
+        <div className="mb-4 text-right">
+          <span className={`text-lg font-semibold ${timeRemaining < 60 ? 'text-red-600' : 'text-blue-600'}`}>
+            Time Remaining: {formatTime(timeRemaining)}
+          </span>
+        </div>
+      )}
+
+      <div className="mb-8 p-4 bg-gray-50 rounded-lg">
+        <h3 className="font-semibold mb-4">Participant Information</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block mb-1">Name</label>
+            <input
+              type="text"
+              name="participantName"
+              value={participantInfo.participantName}
+              onChange={handleParticipantInfoChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block mb-1">Email</label>
+            <input
+              type="email"
+              name="participantEmail"
+              value={participantInfo.participantEmail}
+              onChange={handleParticipantInfoChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+        </div>
+      </div>
 
       {quiz.questions.map((question, index) => (
         <div key={question.id} className="mb-6 border-b pb-6">
@@ -173,7 +265,8 @@ export const TakeQuiz: React.FC = () => {
         <button 
           onClick={handleSubmit}
           className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          disabled={Object.keys(userAnswers).length !== quiz.questions.length}
+          disabled={!participantInfo.participantName || !participantInfo.participantEmail || 
+                   Object.keys(userAnswers).length !== quiz.questions.length}
         >
           Submit Quiz
         </button>
